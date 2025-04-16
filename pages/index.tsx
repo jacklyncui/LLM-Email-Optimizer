@@ -15,11 +15,11 @@ export default function HomePage() {
   const handleToneChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedTone(event.target.value);
   };
-  const content = `
+  const [content, setContent] = useState(`
     <p>Hello,</p>
     <p>I hope this email finds you well.</p>
     <p>Best regards,</p>
-  `;
+  `);
   const extensions = [
     Color.configure({ types: [TextStyle.name, ListItem.name] }),
     TextStyle.configure({
@@ -30,11 +30,11 @@ export default function HomePage() {
     StarterKit.configure({
       bulletList: {
         keepMarks: true,
-        keepAttributes: false, // TODO : Making this as `false` becase marks are not preserved when I try to preserve attrs, awaiting a bit of help
+        keepAttributes: false,
       },
       orderedList: {
         keepMarks: true,
-        keepAttributes: false, // TODO : Making this as `false` becase marks are not preserved when I try to preserve attrs, awaiting a bit of help
+        keepAttributes: false,
       },
     }),
   ]
@@ -47,10 +47,17 @@ export default function HomePage() {
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Compose your email:</h2>
           <div className="border border-gray-300 rounded-lg p-2 bg-white prose max-w-none" onClick={() => {
             if (editor && !editor.isFocused) {
-              editor.commands.focus('end')
+              editor.commands.focus('end');
             }
           }}>
-            <EditorProvider slotBefore={<MenuBar />} extensions={extensions} content={content} />
+            <EditorProvider
+              slotBefore={<MenuBar />}
+              extensions={extensions}
+              content={content}
+              onUpdate={({ editor }) => {
+                setContent(editor.getHTML());
+              }}
+            />
           </div>
         </div>
         <div className="mb-4">
