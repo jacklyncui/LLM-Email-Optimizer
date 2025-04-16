@@ -68,10 +68,21 @@ export default function HomePage() {
             value={selectedTone}
             onChange={handleToneChange}
           >
+            <option value="assertive">Assertive</option>
+            <option value="casual">Casual</option>
+            <option value="concise">Concise</option>
+            <option value="confident">Confident</option>
+            <option value="empathetic">Empathetic</option>
+            <option value="enthusiastic">Enthusiastic</option>
             <option value="formal">Formal</option>
             <option value="friendly">Friendly</option>
-            <option value="persuasive">Persuasive</option>
+            <option value="humorous">Humorous</option>
             <option value="informative">Informative</option>
+            <option value="optimistic">Optimistic</option>
+            <option value="persuasive">Persuasive</option>
+            <option value="professional">Professional</option>
+            <option value="respectful">Respectful</option>
+            <option value="urgent">Urgent</option>
           </select>
         </div>
         <button className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition">
