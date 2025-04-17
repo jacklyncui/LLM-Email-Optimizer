@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { EditorProvider, useCurrentEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ListItem from '@tiptap/extension-list-item'
@@ -8,18 +8,110 @@ import { Color } from '@tiptap/extension-color'
 import MenuBar from '../components/menu-bar';
 
 export default function HomePage() {
-  const { editor } = useCurrentEditor();
-
+  // Create a ref to store editor instance
+  const editorRef = useRef(null);
+  
   const [selectedTone, setSelectedTone] = useState('formal');
-
-  const handleToneChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedTone(event.target.value);
-  };
+  const [isLoading, setIsLoading] = useState(false);
   const [content, setContent] = useState(`
     <p>Hello,</p>
     <p>I hope this email finds you well.</p>
     <p>Best regards,</p>
   `);
+  
+  const handleToneChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTone(event.target.value);
+  };
+  
+  const handleCreateClick = async () => {
+    if (!content.trim()) {
+      alert('Please enter some text to convert');
+      return;
+    }
+
+    setIsLoading(true);
+    console.log('Starting conversion process...');
+    
+    try {
+      // Extract text content from HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      const textContent = tempDiv.textContent || '';
+      console.log('Extracted text:', textContent.substring(0, 50) + '...');
+
+      console.log('Sending API request with tone:', selectedTone);
+      const response = await fetch('/api/convert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textContent,
+          tone: selectedTone,
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('API response:', data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data.result) {
+        throw new Error('No result returned from API');
+      }
+
+      // Clean up the response
+      let cleanResult = data.result;
+      
+      // Remove any placeholder text like [Recipient's Name] if desired
+      // cleanResult = cleanResult.replace(/\[Recipient's Name\]/g, '');
+      // cleanResult = cleanResult.replace(/\[Your Name\]/g, '');
+      
+      // Format the result as HTML paragraphs
+      const paragraphs = cleanResult.split('\n').filter(line => line.trim() !== '');
+      const formattedResult = paragraphs.map(p => `<p>${p}</p>`).join('');
+      
+      console.log('Formatted result:', formattedResult.substring(0, 50) + '...');
+
+      // Update the content state - this will trigger a re-render
+      setContent(formattedResult);
+      console.log('Content updated successfully');
+      
+      // Force update editor content
+      if (editorRef.current) {
+        // @ts-ignore - we know this exists from the ref
+        const editor = editorRef.current;
+        setTimeout(() => {
+          editor.commands.setContent(formattedResult);
+        }, 0);
+      }
+      
+    } catch (error) {
+      console.error('Error during conversion:', error);
+      alert('Error converting text: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+      console.log('Conversion process completed');
+    }
+  };
+  
+  // Custom editor component with ref
+  const Tiptap = ({ content, setContent }) => {
+    const { editor } = useCurrentEditor();
+    
+    // Store editor in ref when it's available
+    useEffect(() => {
+      if (editor) {
+        editorRef.current = editor;
+      }
+    }, [editor]);
+    
+    return null;
+  };
+  
   const extensions = [
     Color.configure({ types: [TextStyle.name, ListItem.name] }),
     TextStyle.configure({
@@ -46,8 +138,8 @@ export default function HomePage() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Compose your email:</h2>
           <div className="border border-gray-300 rounded-lg p-2 bg-white prose max-w-none" onClick={() => {
-            if (editor && !editor.isFocused) {
-              editor.commands.focus('end');
+            if (editorRef.current && !editorRef.current.isFocused) {
+              editorRef.current.commands.focus('end');
             }
           }}>
             <EditorProvider
@@ -57,6 +149,7 @@ export default function HomePage() {
               onUpdate={({ editor }) => {
                 setContent(editor.getHTML());
               }}
+              slotAfter={<Tiptap content={content} setContent={setContent} />}
             />
           </div>
         </div>
@@ -85,11 +178,24 @@ export default function HomePage() {
             <option value="urgent">Urgent</option>
           </select>
         </div>
-        <button className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition">
-          Create
+        <button 
+          className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition flex justify-center items-center"
+          onClick={handleCreateClick}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Converting...
+            </>
+          ) : (
+            'Create'
+          )}
         </button>
       </div>
     </div>
   );
 }
-
