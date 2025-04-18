@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Create completion with OpenAI
     console.log('Calling OpenAI API...');
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
       messages: [
         {
           role: "system",
